@@ -1,0 +1,9 @@
+# VIM temp files
+*swp
+
+# label files output by 64tas
+*labels*
+
+# final binary
+minidycp.prg
+
