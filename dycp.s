@@ -7,10 +7,7 @@
         CHARSET = $2000
         WIDTH = 24
         HEIGHT = 4
-
-sinus   .byte range(24)
-text    .byte range($08, $f8, $08)
-
+        SCROLL_SPEED = 1
 
 setup .proc
         ldy #0
@@ -128,27 +125,81 @@ clear .proc
 update  .proc
         ldy #0
         ldx #0
+        clc
 -
         lda ytable,y
         sta sinus,x
-        inx
         iny
+        cpy #48
+        bcc +
+        ldy #0
++       inx
         cpx #24
         bne -
-        lda update + 1
-        clc
-        adc #01
-        cmp #48
+;        lda update + 1
+;        clc
+;        adc #01
+;        cmp #48
+;        bcc +
+;        sbc #48
+;+       sta update + 1
+
+        ldy update + 1
+        iny
+        cpy #48
         bcc +
-        sbc #48
-+       sta update + 1
+        ldy #0
++       sty update + 1
         rts
 .pend
 
-        .align 256
-ytable  .byte 12 + 11.5 * sin(range(96) * rad(360.0/48.0))
+scroll .proc
+        lda #0
+        sec
+        sbc #SCROLL_SPEED
+        and #07
+        sta scroll +1
+        bcc +
+        rts
++
+        ; move text
+        ldx #0
+-       lda text + 1,x
+        sta text + 0 ,x
+        inx
+        cpx #23
+        bne -
+
+txtidx  lda scrolltext
+        bmi end
+        asl
+        asl
+        asl
+        sta text + 23
+        inc txtidx + 1
+        bne +
+        inc txtidx + 2
++
+        rts
+end
+        lda #<scrolltext
+        ldx #>scrolltext
+        sta txtidx + 1
+        stx txtidx + 2
+        rts
+.pend
+
+
+
 
         .align 256
-
-
-
+sinus   .byte range(24)
+        .align 256
+text    .byte range($08, $f8, $08)
+        .align 256
+ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
+        .align 256
+scrolltext
+        .enc "screen"
+        .text "hello world focus rules "
+        .byte $ff

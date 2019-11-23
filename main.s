@@ -58,6 +58,8 @@ irq1
         inc $d020
         lda #$18
         sta $d018
+        lda dycp.scroll + 1
+        sta $d016
         dec $d020
 
 #trigger_irq irq2, RASTER + ((4 * 8) +2)
@@ -66,11 +68,16 @@ irq2
         dec $d020
         lda #$15
         sta $d018
+        lda #$08
+        sta $d016
         jsr dycp.clear
         dec $d020
         jsr dycp.update
         dec $d020
+        jsr dycp.scroll
+        dec $d020
         jsr dycp.render
+        inc $d020
         inc $d020
         inc $d020
         inc $d020
