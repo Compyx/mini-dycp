@@ -4,7 +4,7 @@
 ;
         ZP = $10
 
-        RASTER = $30
+        RASTER = $30 + 5 * 8
 
 ; BASIC SYS line
         * = $0801
@@ -22,6 +22,8 @@ trigger_irq .macro
 
 start
         sei
+        ldx #$ff
+        txs
         cld
         bit $dc0d
         bit $dd0d
@@ -56,16 +58,22 @@ start
 
 irq1
         inc $d020
-        lda #$18
+        ldx #13
+-       dex
+        bpl -
+        lda #$08
+        ldx dycp.scroll + 1
         sta $d018
-        lda dycp.scroll + 1
-        sta $d016
+        stx $d016
         dec $d020
 
-#trigger_irq irq2, RASTER + ((4 * 8) +2)
+#trigger_irq irq2, RASTER + ((4 * 8) + 1)
 
 irq2
         dec $d020
+        ldx #13
+-       dex
+        bpl -
         lda #$15
         sta $d018
         lda #$08
@@ -95,10 +103,11 @@ do_irq
 
 
 
-        * = $1000
+       ;* = $1000
 
 dycp    .binclude "dycp.s"
 
 
-        * = $1f00
+        .align 256
+        FONT = *
 .binary "font000.prg", 2

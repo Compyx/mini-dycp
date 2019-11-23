@@ -2,8 +2,7 @@
 ;
 ; Mini dycp code
 
-        MATRIX = $0400
-        FONT = $1f00
+        MATRIX = $00c8 + 8
         CHARSET = $2000
         WIDTH = 24
         HEIGHT = 4
@@ -16,7 +15,7 @@ setup .proc
         tya
         ldx #0
 -
-row     sta MATRIX,x
+row     sta @wMATRIX,x
         adc #HEIGHT
         inx
         cpx #WIDTH
@@ -24,6 +23,9 @@ row     sta MATRIX,x
         lda row + 1
         adc #39 ; C = 1
         sta row + 1
+        bcc +
+        inc row +2
++
         iny
         cpy #HEIGHT
         bne --  ; C = 0
@@ -35,6 +37,12 @@ row     sta MATRIX,x
         sta CHARSET + 512,x
         inx
         bne -
+
+        ldx #23
+-       sta sinus,x
+        sta text,x
+        dex
+        bpl -
         rts
 .pend
 
@@ -190,15 +198,13 @@ end
 .pend
 
 
+sinus = MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
+text = sinus+ 24 ; $178-$18f
 
 
-        .align 256
-sinus   .byte range(24)
-        .align 256
-text    .byte range($08, $f8, $08)
-        .align 256
+;        .align 256
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
-        .align 256
+;        .align 256
 scrolltext
         .enc "screen"
         .text "hello world focus rules "
