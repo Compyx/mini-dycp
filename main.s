@@ -111,7 +111,7 @@ logo_d016
         sta $d016
         inc $d020
 
-delay   ldx #$11
+delay   ldx #$14
 -       dex
         bne -
 
@@ -123,13 +123,17 @@ delay2
         cpx #$e0
         bit $ea
 
+        lda #0
+vsp_idx
+        beq +
++
+        .fill 40, $e0
+        bit $ea
+
         lda #$39
         ldx #$3b
         sta $d011
         stx $d011
-;        jsr vsp_start
-
-
 
 
         ldy #$32 + 6* 8 -1
@@ -201,9 +205,9 @@ irq2
         dec $d020
         jsr dycp.render
         dec $d020
-        jsr handle_delay
+        ;jsr handle_delay
         jsr vsp_update
-        jsr show_delay
+        ;jsr show_delay
         inc $d020
         inc $d020
         inc $d020
@@ -247,7 +251,7 @@ _offset bne +
 
 vsp_update
         ldx #0
-        lda dycp.ytable,x
+        lda vsp_table,x
         pha
         and #7
         ora #$10
@@ -260,19 +264,16 @@ vsp_update
         lda #40
         sec
 _tmp    sbc #0
-        sta logo_xpos + 1
+        sta vsp_idx + 1
 
         lda vsp_update + 1
         clc
         adc #1
         tax
-        cpx #48
-        bcc +
-        ldx #0
 +
         stx vsp_update + 1
         rts
-
+.if 0
 handle_delay
         ldx #$1b
         beq ++
@@ -312,7 +313,9 @@ handle_delay
 +
         stx delay + 1
         rts
+.fi
 
+.if 0
 show_delay .proc
         lda delay + 1
         jsr hexdigits
@@ -331,7 +334,7 @@ show_delay .proc
 
         rts
         .pend
-
+.fi
 
 hexdigits .proc
         pha
@@ -352,6 +355,9 @@ hexdigits .proc
 +       adc #$30
         rts
 .pend
+
+vsp_table
+        .byte 64 + 63.5 * sin(range(256) * rad(360.0/256.0))
 
 
 dycp    .binclude "dycp.s"
