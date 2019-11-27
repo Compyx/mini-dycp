@@ -106,9 +106,31 @@ irq0a
         dec $d020
         lda #$15
         sta $d018
+logo_d016
         lda #$08
         sta $d016
         inc $d020
+
+delay   ldx #$11
+-       dex
+        bne -
+
+        lda #0
+delay2
+        beq +
++
+        cpx #$e0
+        cpx #$e0
+        bit $ea
+
+        lda #$39
+        ldx #$3b
+        sta $d011
+        stx $d011
+;        jsr vsp_start
+
+
+
 
         ldy #$32 + 6* 8 -1
         lda #<irq1
@@ -124,6 +146,8 @@ irq1
         ldx #7
 -       dex
         bpl -
+        lda #$1b
+        sta $d011
         lda #$08
         ldx dycp.scroll + 1
         sta $d018
@@ -177,7 +201,9 @@ irq2
         dec $d020
         jsr dycp.render
         dec $d020
-        ;jsr update_fld
+        jsr handle_delay
+        jsr vsp_update
+        jsr show_delay
         inc $d020
         inc $d020
         inc $d020
@@ -200,9 +226,135 @@ do_irq
         pla
         rti
 
+vsp_start
+logo_xpos
+        lda #$03
+        sta _offset +1
+        sta $d020
+        lda #$39
+        ldx #$3b
+        sta $d011
+_offset bne +
++
+        .fill 40, $e0
+        bit $ea
+        nop
+        nop
+        bit $ea
+        stx $d011
+        rts
+
+
+vsp_update
+        ldx #0
+        lda dycp.ytable,x
+        pha
+        and #7
+        ora #$10
+        sta logo_d016 + 1
+        pla
+        lsr
+        lsr
+        lsr
+        sta _tmp + 1
+        lda #40
+        sec
+_tmp    sbc #0
+        sta logo_xpos + 1
+
+        lda vsp_update + 1
+        clc
+        adc #1
+        tax
+        cpx #48
+        bcc +
+        ldx #0
++
+        stx vsp_update + 1
+        rts
+
+handle_delay
+        ldx #$1b
+        beq ++
+        dex
+        bpl +
+        ldx #$1b
++       stx handle_delay+1
+        rts
++
+        lda $dc01
+        and #$02
+
+        beq +
+        rts
++
+        ldx #$1b
+        stx handle_delay + 1
+        and #$08
+        beq +
+        rts
++
+        lda delay2 + 1
+        sec
+        sbc #1
+        bcc +
+        sta delay2 + 1
+        rts
++
+        lda #4
+        sta delay2 + 1
+
+        ldx delay + 1
+        inx
+        cpx #40
+        bcc +
+        ldx #0
++
+        stx delay + 1
+        rts
+
+show_delay .proc
+        lda delay + 1
+        jsr hexdigits
+        sta $0600
+        stx $0601
+        lda delay2 + 1
+        jsr hexdigits
+        sta $0603
+        stx $0604
+
+
+        lda logo_xpos + 1
+        jsr hexdigits
+        sta $0606
+        sty $0607
+
+        rts
+        .pend
+
+
+hexdigits .proc
+        pha
+        and #$0f
+        cmp #$0a
+        bcc +
+        sbc #$39
++       adc #$30
+        tax
+        pla
+        lsr
+        lsr
+        lsr
+        lsr
+        cmp #$0a
+        bcc +
+        sbc #$39
++       adc #$30
+        rts
+.pend
+
 
 dycp    .binclude "dycp.s"
-
 
         .align 256
         FONT = *
