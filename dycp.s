@@ -2,7 +2,7 @@
 ;
 ; Mini dycp code
 
-        MATRIX = $00c8 + 8
+        MATRIX = $00f0 + 8
         CHARSET = $2000
         WIDTH = 24
         HEIGHT = 4
@@ -30,6 +30,7 @@ row     sta @wMATRIX,x
         cpy #HEIGHT
         bne --  ; C = 0
 
+
         ldx #0
         txa
 -       sta CHARSET,x
@@ -39,8 +40,15 @@ row     sta @wMATRIX,x
         bne -
 
         ldx #23
--       sta sinus,x
+-       lda #0
+        sta sinus,x
         sta text,x
+        lda #3
+        sta $d800 + (MATRIX & $03ff),x
+        sta $d828 + (MATRIX & $03ff),x
+        sta $d850 + (MATRIX & $03ff),x
+        sta $d878 + (MATRIX & $03ff),x
+
         dex
         bpl -
         rts
