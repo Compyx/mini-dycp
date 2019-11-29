@@ -271,7 +271,9 @@ _tmp    sbc #0
         adc #1
         tax
 +
-        stx vsp_update + 1
+        txa
+        and #$3f
+        sta vsp_update + 1
         rts
 .if 0
 handle_delay
@@ -357,7 +359,7 @@ hexdigits .proc
 .pend
 
 vsp_table
-        .byte 64 + 63.5 * sin(range(256) * rad(360.0/256.0))
+        .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
 
 
 dycp    .binclude "dycp.s"
