@@ -135,28 +135,7 @@ vsp_idx
         sta $d011
         stx $d011
 
-
-        ldy #$32 + 6* 8 -1
-        lda #<irq1
-        ldx #>irq1
-        jmp do_irq
-
-irq1
-        pha
-        txa
-        pha
-        tay
-        pha
-        ldx #7
--       dex
-        bpl -
-        lda #$1b
-        sta $d011
-        lda #$08
-        ldx dycp.scroll + 1
-        sta $d018
-        stx $d016
-        lda #4
+        lda #5
         sta $d020
 .if SID_ENABLE
         ldx #$0f
@@ -173,11 +152,57 @@ irq1
         dex
         bpl -
 .fi
+
+        lda #0
+        sta $d020
+
+        ldy #$32 + 6* 8 - 3
+        lda #<irq1
+        ldx #>irq1
+        jmp do_irq
+
+irq1
+        pha
+        txa
+        pha
+        tya
+        pha
+
+        lda #<irq1a
+        ldx #>irq1a
+        ldy #$32 + 6 * 8 - 2
+        sty $d012
+        sta $fffe
+        stx $ffff
+        inc $d019
+        tsx
+        cli
+        .fill 10, $ea
+irq1a
+        txs
+        ldx #8
+-       dex
+        bne -
+        bit $ea
+        lda $d012
+        cmp $d012
+        beq +
++
+        .fill 4, $ea
+        inc $d020
+        lda #$1b
+        sta $d011
+        lda #$08
+        ldx dycp.scroll + 1
+        sta $d018
+        stx $d016
+        lda #4
+        sta $d020
         lda #0
         sta $d020
 
 
-        lda #$32+ (6+4) *8 - 2
+        lda #$32+ (6+4) *8 
         tay
         lda #<irq2
         ldx #>irq2
