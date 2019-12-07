@@ -54,6 +54,8 @@ start
         sty $d012
         lda #$1b
         sta $d011
+        lda #$08
+        sta $d018
 
         ldx #$00
         stx $dc0e
@@ -92,7 +94,7 @@ irq0
         inc $d019
         tsx
         cli
-        .fill 11, $ea
+        .fill 11, $ea   ; reduce?
 irq0a
         txs
         ldx #8
@@ -156,7 +158,7 @@ vsp_idx
         lda #0
         sta $d020
 
-        ldy #$32 + 6* 8 - 3
+        ldy #$32 + 6* 8  - 2
         lda #<irq1
         ldx #>irq1
         jmp do_irq
@@ -170,7 +172,7 @@ irq1
 
         lda #<irq1a
         ldx #>irq1a
-        ldy #$32 + 6 * 8 - 2
+        ldy #$32 + 6 * 8 - 1
         sty $d012
         sta $fffe
         stx $ffff
@@ -188,21 +190,42 @@ irq1a
         cmp $d012
         beq +
 +
-        .fill 4, $ea
+delay3_major
+        ldx #1
+-       dex
+        bne -
+delay3_minor
+        beq *+2
+        cpx #$e0
+        cpx #$e0
+        bit $ea
+
+        dec $d020
+        jsr fcps2
+;        .fill 12, $ea
         inc $d020
         lda #$1b
         sta $d011
         lda #$08
         ldx dycp.scroll + 1
-        sta $d018
         stx $d016
+        sta $d018
+
+
+
+        ;ldx #$08
+        ;stx $d016
+        ;lda #$08
+        ;sta $d018
+        sta $d020
         lda #4
         sta $d020
-        lda #0
-        sta $d020
 
 
-        lda #$32+ (6+4) *8 
+
+        ;lda #$1b
+        ;sta $d011
+        lda #$32+ (6+4) * 8 -3
         tay
         lda #<irq2
         ldx #>irq2
@@ -214,14 +237,18 @@ irq2
         pha
         tya
         pha
-        dec $d020
-        ldx #13
+        lda #6
+        sta $d020
+        ldx #20
 -       dex
         bpl -
         lda #$15
         sta $d018
         lda #$08
         sta $d016
+
+
+
         jsr dycp.clear
         dec $d020
         jsr dycp.update
@@ -230,7 +257,7 @@ irq2
         dec $d020
         jsr dycp.render
         dec $d020
-        ;jsr handle_delay
+        jsr handle_delay
         jsr vsp_update
         ;jsr show_delay
         inc $d020
@@ -300,47 +327,45 @@ _tmp    sbc #0
         and #$3f
         sta vsp_update + 1
         rts
-.if 0
+
+
+
 handle_delay
-        ldx #$1b
+        ldx #$08
         beq ++
         dex
         bpl +
-        ldx #$1b
+        ldx #$08
 +       stx handle_delay+1
         rts
 +
         lda $dc01
-        and #$02
+        and #$10
 
         beq +
         rts
 +
-        ldx #$1b
+        ldx #$08
         stx handle_delay + 1
         and #$08
         beq +
         rts
 +
-        lda delay2 + 1
+        lda delay3_minor + 1
         sec
         sbc #1
         bcc +
-        sta delay2 + 1
+        sta delay3_minor + 1
         rts
 +
         lda #4
-        sta delay2 + 1
+        sta delay3_minor + 1
 
-        ldx delay + 1
+        ldx delay3_major + 1
         inx
-        cpx #40
-        bcc +
-        ldx #0
 +
-        stx delay + 1
+        stx delay3_major + 1
         rts
-.fi
 
 .if 0
 show_delay .proc
@@ -382,6 +407,26 @@ hexdigits .proc
 +       adc #$30
         rts
 .pend
+
+
+fcps2 .proc
+        lda #42
+        sec
+        sbc vsp_idx +1
+        sta offset + 1
+        lda #$19
+        ldx #$1b
+        sta $d011
+offset  bne +
++      .fill 40, $e0
+        bit $ea
+        stx $d011
+        rts
+
+
+
+.pend
+
 
 vsp_table
         .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
