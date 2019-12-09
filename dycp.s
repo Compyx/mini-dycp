@@ -3,7 +3,7 @@
 ; Mini dycp code
 
         MATRIX = $00f0 + 8
-        CHARSET = $2000
+        CHARSET = $3000
         WIDTH = 24
         HEIGHT = 4
         SCROLL_SPEED = 1

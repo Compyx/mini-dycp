@@ -41,7 +41,6 @@ start
         bit $dd0d
         lda #$06
         sta $d020
-        sta $d021
         lda #$7f
         sta $dc0d
         sta $dd0d
@@ -58,6 +57,7 @@ start
         sta $d018
 
         ldx #$00
+        stx $d021
         stx $dc0e
         stx $dd0e
         inx
@@ -65,6 +65,7 @@ start
 
         inc $d019
 
+        jsr logo_setup
         jsr dycp.setup
 .if SID_ENABLE
         ldx #$0f
@@ -106,10 +107,10 @@ irq0a
         beq +
 +
         dec $d020
-        lda #$15
+        lda #$a8
         sta $d018
 logo_d016
-        lda #$08
+        lda #$18
         sta $d016
         inc $d020
 
@@ -158,7 +159,7 @@ vsp_idx
         lda #0
         sta $d020
 
-        ldy #$32 + 6* 8  - 2
+        ldy #$32 + 5* 8  - 2
         lda #<irq1
         ldx #>irq1
         jmp do_irq
@@ -172,7 +173,7 @@ irq1
 
         lda #<irq1a
         ldx #>irq1a
-        ldy #$32 + 6 * 8 - 1
+        ldy #$32 + 5 * 8 - 1
         sty $d012
         sta $fffe
         stx $ffff
@@ -206,7 +207,7 @@ delay3_minor
         inc $d020
         lda #$1b
         sta $d011
-        lda #$08
+        lda #$0c
         ldx dycp.scroll + 1
         stx $d016
         sta $d018
@@ -257,14 +258,11 @@ irq2
         dec $d020
         jsr dycp.render
         dec $d020
-        jsr handle_delay
+        ;jsr handle_delay
         jsr vsp_update
         ;jsr show_delay
-        inc $d020
-        inc $d020
-        inc $d020
-        inc $d020
-        inc $d020
+        lda #0
+        sta $d020
 
         lda #<irq0
         ldx #>irq0
@@ -330,7 +328,7 @@ _tmp    sbc #0
 
 
 
-handle_delay
+handle_delay .proc
         ldx #$08
         beq ++
         dex
@@ -366,6 +364,7 @@ handle_delay
 +
         stx delay3_major + 1
         rts
+.pend
 
 .if 0
 show_delay .proc
@@ -422,11 +421,23 @@ offset  bne +
         bit $ea
         stx $d011
         rts
-
-
-
 .pend
 
+
+logo_setup .proc
+        ldx #LOGO_WIDTH - 1
+-       lda logo_colram,x
+        sta $d800 + 40 + LOGO_OFFSET + 1,x
+        lda logo_colram + 20,x
+        sta $d800 + 40 + LOGO_OFFSET + 41,x
+        lda logo_colram + 40,x
+        sta $d800 + 40 + LOGO_OFFSET + 81,x
+        lda logo_colram + 60,x
+        sta $d800 + 40 + LOGO_OFFSET + 121,x
+        dex
+        bpl -
+        rts
+.pend
 
 vsp_table
         .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
@@ -441,3 +452,25 @@ dycp    .binclude "dycp.s"
 
         * = SID_LOAD
 .binary format("%s", SID_PATH), $7e
+
+
+LOGO_OFFSET = 25
+LOGO_WIDTH = 20
+
+; bitmap (interleave with code or data here)
+        * = $2000 + LOGO_OFFSET * 8
+.binary "focus.kla", 2, 5 * 320
+
+
+; vidram (interleave with code or data here)
+        * = $2800 + LOGO_OFFSET
+.binary "focus.kla", 2 + 8000, 5 * 40
+
+; colram
+        * = $2c00
+logo_colram
+.for cram_row = 0, cram_row < 4, cram_row += 1
+  .binary "focus.kla", 2 + 9000 + (cram_row + 1) * 40 + 1, LOGO_WIDTH
+.next
+
+
