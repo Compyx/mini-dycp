@@ -166,6 +166,48 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
+        * = $4800
+dycp_render .proc
+        ldx #0
+        stx ZP + 2
+        lda #<dycp.CHARSET
+        sta ZP
+        lda #>dycp.CHARSET
+        sta ZP + 1
+-
+        ldy dycp.sinus,x
+        lda dycp.text,x
+        tax
+        lda FONT,x
+        sta (ZP),y
+        iny
+        lda FONT+1,x
+        sta (ZP),y
+        iny
+        lda FONT+2,x
+        sta (ZP),y
+        iny
+        lda FONT+3,x
+        sta (ZP),y
+        iny
+        lda FONT+4,x
+        sta (ZP),y
+
+        lda ZP
+        clc
+        adc #4*8
+        sta ZP
+        bcc +
+        inc ZP +1
++
+        inc ZP + 2
+        ldx ZP + 2
+        cpx  #24
+        bne -
+        rts
+.pend
+
+
 
         *= $2b00
         ; *= $4000
@@ -261,7 +303,7 @@ irq2
         dec $d020
         jsr dycp.scroll
         dec $d020
-        jsr dycp.render
+        jsr dycp_render
         dec $d020
         ;jsr handle_delay
         jsr vsp_update
