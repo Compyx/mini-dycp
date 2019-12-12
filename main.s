@@ -65,6 +65,9 @@ start
 
         inc $d019
 
+        lda #$aa
+        sta $3fff
+
         jsr logo_setup
         jsr dycp.setup
 .if SID_ENABLE
@@ -114,18 +117,11 @@ logo_d016
         sta $d016
         inc $d020
 
-delay   ldx #$14
+delay   ldx #$16
 -       dex
         bne -
 
-        lda #0
-delay2
-        beq +
-+
-        cpx #$e0
-        cpx #$e0
-        bit $ea
-
+        nop
         lda #0
 vsp_idx
         beq +
@@ -192,14 +188,14 @@ irq1a
         beq +
 +
 delay3_major
-        ldx #1
+        ldx #3
 -       dex
         bne -
 delay3_minor
-        beq *+2
-        cpx #$e0
-        cpx #$e0
-        bit $ea
+;        beq *+2         ; 3
+;        cpx #$e0        ; 2
+;        cpx #$e0        ; 2
+;        bit $ea         ; 3
 
         dec $d020
         jsr fcps2
@@ -287,7 +283,6 @@ logo_xpos
         sta $d020
         lda #$39
         ldx #$3b
-        sta $d011
 _offset bne +
 +
         .fill 40, $e0
@@ -295,6 +290,7 @@ _offset bne +
         nop
         nop
         bit $ea
+        sta $d011
         stx $d011
         rts
 
@@ -427,13 +423,13 @@ offset  bne +
 logo_setup .proc
         ldx #LOGO_WIDTH - 1
 -       lda logo_colram,x
-        sta $d800 + 40 + LOGO_OFFSET + 1,x
+        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 0,x
         lda logo_colram + 20,x
-        sta $d800 + 40 + LOGO_OFFSET + 41,x
+        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 40,x
         lda logo_colram + 40,x
-        sta $d800 + 40 + LOGO_OFFSET + 81,x
+        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 80,x
         lda logo_colram + 60,x
-        sta $d800 + 40 + LOGO_OFFSET + 121,x
+        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 120,x
         dex
         bpl -
         rts
@@ -456,21 +452,21 @@ dycp    .binclude "dycp.s"
 
 LOGO_OFFSET = 25
 LOGO_WIDTH = 20
+LOGO_ROW = 0
 
 ; bitmap (interleave with code or data here)
-        * = $2000 + LOGO_OFFSET * 8
+        * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
 .binary "focus.kla", 2, 5 * 320
 
-
 ; vidram (interleave with code or data here)
-        * = $2800 + LOGO_OFFSET
+        * = $2800 + LOGO_OFFSET + (LOGO_ROW * 40)
 .binary "focus.kla", 2 + 8000, 5 * 40
 
 ; colram
         * = $2c00
 logo_colram
 .for cram_row = 0, cram_row < 4, cram_row += 1
-  .binary "focus.kla", 2 + 9000 + (cram_row + 1) * 40 + 1, LOGO_WIDTH
+  .binary "focus.kla", 2 + 9000 + (cram_row) * 40 + 0, LOGO_WIDTH
 .next
 
 
