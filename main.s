@@ -1,6 +1,6 @@
 ; vim: set et ts=8 sw=8 sts=8 fdm=marker syntax=64tass:
 ;
-;
+; $2800-$2aff = dycp
 ;
         SID_ENABLE= 1
         SID_LOAD = $1000
@@ -27,6 +27,7 @@ trigger_irq .macro
         jmp do_irq
 .endm
 
+        * = $2000
 start
         lda #$00
         sta $0286
@@ -110,17 +111,22 @@ irq0a
         beq +
 +
         dec $d020
-        lda #$a8
+
+        jmp deicide
+
+        * = $2168
+deicide
+        lda #$b8
         sta $d018
 logo_d016
         lda #$18
         sta $d016
         inc $d020
 
-delay   ldx #$16
+delay   ldx #$15
 -       dex
         bne -
-
+        nop
         nop
         lda #0
 vsp_idx
@@ -160,6 +166,9 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
+
+        *= $2b00
+        ; *= $4000
 irq1
         pha
         txa
@@ -203,7 +212,7 @@ delay3_minor
         inc $d020
         lda #$1b
         sta $d011
-        lda #$0c
+        lda #$0a
         ldx dycp.scroll + 1
         stx $d016
         sta $d018
@@ -246,7 +255,7 @@ irq2
 
 
 
-        jsr dycp.clear
+        jsr dycp_clear
         dec $d020
         jsr dycp.update
         dec $d020
@@ -263,7 +272,6 @@ irq2
         lda #<irq0
         ldx #>irq0
         ldy #RASTER
-
 do_irq
         sta $fffe
         stx $ffff
@@ -275,6 +283,8 @@ do_irq
         tax
         pla
         rti
+
+        * = $2528
 
 vsp_start
 logo_xpos
@@ -403,7 +413,7 @@ hexdigits .proc
         rts
 .pend
 
-
+        * = $22a8
 fcps2 .proc
         lda #42
         sec
@@ -434,14 +444,54 @@ logo_setup .proc
         bpl -
         rts
 .pend
+dycp_clear .proc
+        ldx #0
+        stx ZP + 2
 
-vsp_table
-        .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
+        lda #<dycp.CHARSET
+        sta ZP + 0
+        lda #>dycp.CHARSET
+        sta ZP + 1
+-
+        ldy dycp.sinus,x
+        lda #0
+        ldx #4
+-       sta (ZP),y
+        iny
+        dex
+        bpl -
 
+;        sta (ZP),y
+;        iny
+;        sta (ZP),y
+;        iny
+;        sta (ZP),y
+;        iny
+;        sta (ZP),y
+;        iny
+;        sta (ZP),y
+
+        lda ZP
+        clc
+        adc #4*8
+        sta ZP
+        bcc +
+        inc ZP +1
++
+        inc ZP + 2
+        ldx ZP + 2
+        cpx #24
+        bne --
+        rts
+.pend
+
+        * = $4000
 
 dycp    .binclude "dycp.s"
 
         .align 256
+
+        * = $2f00
         FONT = *
 .binary "font000.prg", 2
 
@@ -456,17 +506,25 @@ LOGO_ROW = 0
 
 ; bitmap (interleave with code or data here)
         * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
-.binary "focus.kla", 2, 5 * 320
+.for bmp_row = 0, bmp_row < 4, bmp_row += 1
+  .binary "focus.kla", 2 + (bmp_row * 320), LOGO_WIDTH * 8
+  * += $140 - (LOGO_WIDTH * 8)
+.next
+;.binary "focus.kla", 2, 5 * 320
 
 ; vidram (interleave with code or data here)
-        * = $2800 + LOGO_OFFSET + (LOGO_ROW * 40)
+        * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
 .binary "focus.kla", 2 + 8000, 5 * 40
 
 ; colram
-        * = $2c00
+        * = $2e00
 logo_colram
 .for cram_row = 0, cram_row < 4, cram_row += 1
   .binary "focus.kla", 2 + 9000 + (cram_row) * 40 + 0, LOGO_WIDTH
 .next
 
+vsp_table
+        .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
 
+
+ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))

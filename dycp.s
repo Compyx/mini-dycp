@@ -3,7 +3,7 @@
 ; Mini dycp code
 
         MATRIX = $00f0 + 8
-        CHARSET = $3000
+        CHARSET = $2800
         WIDTH = 24
         HEIGHT = 4
         SCROLL_SPEED = 1
@@ -54,7 +54,7 @@ row     sta @wMATRIX,x
         rts
 .pend
 
-
+        .align 256
 render .proc
         ldx #0
         stx ZP + 2
@@ -96,48 +96,8 @@ render .proc
         rts
 .pend
 
-clear .proc
-        ldx #0
-        stx ZP + 2
 
-        lda #<CHARSET
-        sta ZP + 0
-        lda #>CHARSET
-        sta ZP + 1
--
-        ldy sinus,x
-        lda #0
-        ldx #4
--       sta (ZP),y
-        iny
-        dex
-        bpl -
-
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-
-        lda ZP
-        clc
-        adc #4*8
-        sta ZP
-        bcc +
-        inc ZP +1
-+
-        inc ZP + 2
-        ldx ZP + 2
-        cpx #24
-        bne --
-        rts
-.pend
-
-
+        .align 256
 update  .proc
         ldy #0
         ldx #0
@@ -168,6 +128,9 @@ update  .proc
 +       sty update + 1
         rts
 .pend
+
+
+        .align 256
 
 scroll .proc
         lda #0
@@ -211,7 +174,6 @@ text = sinus+ 24 ; $178-$18f
 
 
 ;        .align 256
-ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 ;        .align 256
 scrolltext
         .enc "screen"
