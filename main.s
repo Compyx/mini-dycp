@@ -70,7 +70,7 @@ start
         sta $3fff
 
         jsr logo_setup
-        jsr dycp.setup
+        jsr dycp_setup
 .if SID_ENABLE
         ldx #$0f
 -       lda $f0,x
@@ -166,7 +166,7 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
-        * = $4800
+        * = $23e8
 dycp_render .proc
         ldx #0
         stx ZP + 2
@@ -255,7 +255,7 @@ delay3_minor
         lda #$1b
         sta $d011
         lda #$0a
-        ldx dycp.scroll + 1
+        ldx dycp_scroll + 1
         stx $d016
         sta $d018
 
@@ -299,9 +299,9 @@ irq2
 
         jsr dycp_clear
         dec $d020
-        jsr dycp.update
+        jsr dycp_update
         dec $d020
-        jsr dycp.scroll
+        jsr dycp_scroll
         dec $d020
         jsr dycp_render
         dec $d020
@@ -326,8 +326,44 @@ do_irq
         pla
         rti
 
+dycp_scroll .proc
+        lda #0
+        sec
+        sbc #dycp.SCROLL_SPEED
+        and #07
+        sta dycp_scroll +1
+        bcc +
+        rts
++
+        ; move text
+        ldx #0
+-       lda dycp.text + 1,x
+        sta dycp.text + 0 ,x
+        inx
+        cpx #23
+        bne -
+
+txtidx  lda dycp.scrolltext
+        bmi end
+        asl
+        asl
+        asl
+        sta dycp.text + 23
+        inc txtidx + 1
+        bne +
+        inc txtidx + 2
++
+        rts
+end
+        lda #<dycp.scrolltext
+        ldx #>dycp.scrolltext
+        sta txtidx + 1
+        stx txtidx + 2
+        rts
+.pend
         * = $2528
 
+.if 0
 vsp_start
 logo_xpos
         lda #$03
@@ -337,7 +373,7 @@ logo_xpos
         ldx #$3b
 _offset bne +
 +
-        .fill 40, $e0
+        .fill 32, $e0
         bit $ea
         nop
         nop
@@ -345,7 +381,7 @@ _offset bne +
         sta $d011
         stx $d011
         rts
-
+.endif
 
 vsp_update
         ldx #0
@@ -374,8 +410,84 @@ _tmp    sbc #0
         sta vsp_update + 1
         rts
 
+dycp_setup .proc
+        ldy #0
+        clc
+-
+        tya
+        ldx #0
+-
+row     sta @wdycp.MATRIX,x
+        adc #dycp.HEIGHT
+        inx
+        cpx #dycp.WIDTH
+        bne -
+        lda row + 1
+        adc #39 ; C = 1
+        sta row + 1
+        bcc +
+        inc row +2
++
+        iny
+        cpy #dycp.HEIGHT
+        bne --  ; C = 0
 
 
+        ldx #0
+        txa
+-       sta dycp.CHARSET,x
+        sta dycp.CHARSET + 256,x
+        sta dycp.CHARSET + 512,x
+        inx
+        bne -
+
+        ldx #23
+-       lda #0
+        sta dycp.sinus,x
+        sta dycp.text,x
+        lda #3
+        sta $d800 + (dycp.MATRIX & $03ff),x
+        sta $d828 + (dycp.MATRIX & $03ff),x
+        sta $d850 + (dycp.MATRIX & $03ff),x
+        sta $d878 + (dycp.MATRIX & $03ff),x
+
+        dex
+        bpl -
+        rts
+.pend
+dycp_update  .proc
+        ldy #0
+        ldx #0
+        clc
+-
+        lda ytable,y
+        sta dycp.sinus,x
+        iny
+        cpy #48
+        bcc +
+        ldy #0
++       inx
+        cpx #24
+        bne -
+;        lda update + 1
+;        clc
+;        adc #01
+;        cmp #48
+;        bcc +
+;        sbc #48
+;+       sta update + 1
+
+        ldy dycp_update + 1
+        iny
+        cpy #48
+        bcc +
+        ldy #0
++       sty dycp_update + 1
+        rts
+.pend
+
+
+.if 0
 handle_delay .proc
         ldx #$08
         beq ++
@@ -413,6 +525,7 @@ handle_delay .proc
         stx delay3_major + 1
         rts
 .pend
+.endif
 
 .if 0
 show_delay .proc
@@ -486,6 +599,8 @@ logo_setup .proc
         bpl -
         rts
 .pend
+
+
 dycp_clear .proc
         ldx #0
         stx ZP + 2
@@ -527,11 +642,6 @@ dycp_clear .proc
         rts
 .pend
 
-        * = $4000
-
-dycp    .binclude "dycp.s"
-
-        .align 256
 
         * = $2f00
         FONT = *
@@ -546,6 +656,7 @@ LOGO_OFFSET = 25
 LOGO_WIDTH = 20
 LOGO_ROW = 0
 
+; $20c8-$21
 ; bitmap (interleave with code or data here)
         * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
 .for bmp_row = 0, bmp_row < 4, bmp_row += 1
@@ -570,3 +681,13 @@ vsp_table
 
 
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
+
+
+        * = $4000
+
+
+
+        .align 256
+
+dycp    .binclude "dycp.s"
+
