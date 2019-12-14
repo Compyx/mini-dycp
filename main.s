@@ -47,28 +47,23 @@ start
         sta $dd0d
         bit $dc0d
         bit $dd0d
-        lda #$01
-        sta $d019
+        ldx #$01
+        stx $d019
         
         lda #<irq0
-        ldx #>irq0
-        ldy #RASTER
         sta $fffe
-        stx $ffff
+        lda #>irq0
+        sta $ffff
+        ldy #RASTER
         sty $d012
         lda #$1b
         sta $d011
         lda #$08
         sta $d018
 
-        ldx #$00
-        stx $d021
-        inx
         stx $d01a
-
-
-        lda #$aa
-        sta $3fff
+        dex
+        stx $d021
 
         jsr logo_setup
         jsr dycp_setup
@@ -622,6 +617,38 @@ dycp_clear .proc
         rts
 .pend
 
+sprites_setup .proc
+        lda #$c0
+        sta $d015
+        sta $d017
+        sta $d01d
+        ldx #$3e
+        lda #$ff
+-       sta FILL_SPRITE,x
+        dex
+        bpl -
+        ;lda #$07
+        lda#0
+        sta $d027 + 6
+        sta $d027 + 7
+
+        lda #(FILL_SPRITE /64)
+        sta $03fe
+        sta $03ff
+
+        lda #$30
+        sta $d00c
+        lda #$18
+        sta $d00e
+        lda #$80
+        sta $d010
+        lda #$60
+        sta $d00d
+        sta $d00f
+        rts
+.pend
+
+
 
         * = $2f00
         FONT = *
@@ -671,37 +698,5 @@ ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 
 dycp    .binclude "dycp.s"
 
-
         .align 256
-sprites_setup .proc
-        lda #$c0
-        sta $d015
-        sta $d017
-        sta $d01d
-        ldx #$3e
-        lda #$ff
--       sta FILL_SPRITE,x
-        dex
-        bpl -
-
-        ;lda #$07
-        lda#0
-        sta $d027 + 6
-        sta $d027 + 7
-
-        lda #(FILL_SPRITE /64)
-        sta $03fe
-        sta $03ff
-
-        lda #$30
-        sta $d00c
-        lda #$18
-        sta $d00e
-        lda #$80
-        sta $d010
-        lda #$60
-        sta $d00d
-        sta $d00f
-        rts
-.pend
 
