@@ -11,6 +11,8 @@
         ZP_TMP = $10
         ZP = $20
 
+        FILL_SPRITE = $40
+
         RASTER = $2d
 
 ; BASIC SYS line
@@ -38,14 +40,16 @@ start
         cld
         lda #$35
         sta $01
-        bit $dc0d
-        bit $dd0d
         lda #$06
         sta $d020
         lda #$7f
         sta $dc0d
         sta $dd0d
-
+        bit $dc0d
+        bit $dd0d
+        lda #$01
+        sta $d019
+        
         lda #<irq0
         ldx #>irq0
         ldy #RASTER
@@ -59,18 +63,16 @@ start
 
         ldx #$00
         stx $d021
-        stx $dc0e
-        stx $dd0e
         inx
         stx $d01a
 
-        inc $d019
 
         lda #$aa
         sta $3fff
 
         jsr logo_setup
         jsr dycp_setup
+        jsr sprites_setup
 .if SID_ENABLE
         ldx #$0f
 -       lda $f0,x
@@ -123,11 +125,9 @@ logo_d016
         sta $d016
         inc $d020
 
-delay   ldx #$15
+delay   ldx #$16
 -       dex
         bne -
-        nop
-        nop
         lda #0
 vsp_idx
         beq +
@@ -363,26 +363,6 @@ end
 .pend
         * = $2528
 
-.if 0
-vsp_start
-logo_xpos
-        lda #$03
-        sta _offset +1
-        sta $d020
-        lda #$39
-        ldx #$3b
-_offset bne +
-+
-        .fill 32, $e0
-        bit $ea
-        nop
-        nop
-        bit $ea
-        sta $d011
-        stx $d011
-        rts
-.endif
-
 vsp_update
         ldx #0
         lda vsp_table,x
@@ -570,7 +550,7 @@ hexdigits .proc
 
         * = $22a8
 fcps2 .proc
-        lda #42
+        lda #41
         sec
         sbc vsp_idx +1
         sta offset + 1
@@ -690,4 +670,38 @@ ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
         .align 256
 
 dycp    .binclude "dycp.s"
+
+
+        .align 256
+sprites_setup .proc
+        lda #$c0
+        sta $d015
+        sta $d017
+        sta $d01d
+        ldx #$3e
+        lda #$ff
+-       sta FILL_SPRITE,x
+        dex
+        bpl -
+
+        ;lda #$07
+        lda#0
+        sta $d027 + 6
+        sta $d027 + 7
+
+        lda #(FILL_SPRITE /64)
+        sta $03fe
+        sta $03ff
+
+        lda #$30
+        sta $d00c
+        lda #$18
+        sta $d00e
+        lda #$80
+        sta $d010
+        lda #$60
+        sta $d00d
+        sta $d00f
+        rts
+.pend
 
