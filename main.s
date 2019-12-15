@@ -1,6 +1,9 @@
 ; vim: set et ts=8 sw=8 sts=8 fdm=marker syntax=64tass:
 ;
-; $2800-$2aff = dycp
+; $2000-$25ff = bitmap logo, starts at $20c8 with 20 chars each row, so there's
+;               some free space for code/data (pretty much filled at the moment)
+; $2800-$2aff = dycp (filled)
+; $2c00-$2c9f = bitmap logo vidram (cannot add code there)
 ;
         SID_ENABLE= 1
         SID_LOAD = $1000
@@ -49,7 +52,7 @@ start
         bit $dd0d
         ldx #$01
         stx $d019
-        
+
         lda #<irq0
         sta $fffe
         lda #>irq0
@@ -243,7 +246,9 @@ delay3_minor
 ;        cpx #$e0        ; 2
 ;        bit $ea         ; 3
 
-        dec $d020
+        nop
+        nop
+        nop
         jsr fcps2
 ;        .fill 12, $ea
         inc $d020
@@ -252,8 +257,14 @@ delay3_minor
         lda #$0a
         ldx dycp_scroll + 1
         stx $d016
+        ldx #$30
+-       dex
+        bpl -
         sta $d018
+        lda #6
 
+        sta $d020
+        sta $d021
 
 
         ;ldx #$08
@@ -280,8 +291,8 @@ irq2
         pha
         tya
         pha
-        lda #6
-        sta $d020
+        lda #0
+        sta $d021
         ldx #20
 -       dex
         bpl -
@@ -544,7 +555,7 @@ hexdigits .proc
 .pend
 
         * = $22a8
-fcps2 .proc
+fcps2
         lda #41
         sec
         sbc vsp_idx +1
@@ -557,7 +568,7 @@ offset  bne +
         bit $ea
         stx $d011
         rts
-.pend
+
 
 
 logo_setup .proc
@@ -593,16 +604,6 @@ dycp_clear .proc
         dex
         bpl -
 
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-;        iny
-;        sta (ZP),y
-
         lda ZP
         clc
         adc #4*8
@@ -616,7 +617,7 @@ dycp_clear .proc
         bne --
         rts
 .pend
-
+        *= $2d00
 sprites_setup .proc
         lda #$c0
         sta $d015
@@ -627,8 +628,7 @@ sprites_setup .proc
 -       sta FILL_SPRITE,x
         dex
         bpl -
-        ;lda #$07
-        lda#0
+        lda #7
         sta $d027 + 6
         sta $d027 + 7
 
@@ -672,15 +672,21 @@ LOGO_ROW = 0
 .next
 ;.binary "focus.kla", 2, 5 * 320
 
+
+
 ; vidram (interleave with code or data here)
         * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
-.binary "focus.kla", 2 + 8000, 5 * 40
+.for vram_row = 0, vram_row < 4, vram_row += 1
+  .binary "focus.kla", 2 + 8000 + (vram_row * 40) + 0, LOGO_WIDTH
+  * += (40 - LOGO_WIDTH)
+.next
+
 
 ; colram
         * = $2e00
 logo_colram
 .for cram_row = 0, cram_row < 4, cram_row += 1
-  .binary "focus.kla", 2 + 9000 + (cram_row) * 40 + 0, LOGO_WIDTH
+  .binary "focus.kla", 2 + 9000 + (cram_row * 40) + 0, LOGO_WIDTH
 .next
 
 vsp_table
@@ -690,13 +696,22 @@ vsp_table
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 
 
+dycp .block
+        MATRIX = $00f0 + 8
+        CHARSET = $2800
+        WIDTH = 24
+        HEIGHT = 4
+        SCROLL_SPEED = 1
+
+sinus = MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
+text = sinus+ 24 ; $178-$18f
+
+
         * = $4000
 
-
-
-        .align 256
-
-dycp    .binclude "dycp.s"
-
-        .align 256
-
+scrolltext
+        .enc "screen"
+        .text "hello world   focus rules   "
+        .byte $1b, $1c, $1d, $1e, $1f
+        .byte $ff
+.bend

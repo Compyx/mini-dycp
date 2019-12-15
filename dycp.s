@@ -9,16 +9,10 @@
         SCROLL_SPEED = 1
 
 
-
-
-
-
 sinus = MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
 text = sinus+ 24 ; $178-$18f
 
 
-;        .align 256
-;        .align 256
 scrolltext
         .enc "screen"
         .text "hello world   focus rules   "
