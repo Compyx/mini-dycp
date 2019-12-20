@@ -5,7 +5,7 @@
 ; $2800-$2aff = dycp (filled)
 ; $2c00-$2c9f = bitmap logo vidram (cannot add code there)
 ;
-        SID_ENABLE= 1
+        SID_ENABLE= 0
         SID_LOAD = $1000
         SID_PATH = "Plaster.sid"
         SID_INIT = SID_LOAD + 0
@@ -17,6 +17,21 @@
         FILL_SPRITE = $40
 
         RASTER = $2d
+
+        dycp_sinus = DYCP_MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
+        dycp_text = dycp_sinus+ 24 ; $178-$18f
+
+        DYCP_MATRIX = $00f0 + 8
+        DYCP_CHARSET = $2800
+        DYCP_WIDTH = 24
+        DYCP_HEIGHT = 4
+        DYCP_SCROLL_SPEED = 1
+
+        LOGO_OFFSET = 25
+        LOGO_WIDTH = 20
+        LOGO_ROW = 0
+
+
 
 ; BASIC SYS line
         * = $0801
@@ -34,7 +49,7 @@ trigger_irq .macro
 
         * = $2000
 start
-        lda #$00
+        lda #0
         sta $0286
         jsr $e536
         sei
@@ -164,17 +179,18 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
-        * = $23e8
+        ;* = $23e8
+        * = $4800
 dycp_render .proc
         ldx #0
         stx ZP + 2
-        lda #<dycp.CHARSET
+        lda #<DYCP_CHARSET
         sta ZP
-        lda #>dycp.CHARSET
+        lda #>DYCP_CHARSET
         sta ZP + 1
 -
-        ldy dycp.sinus,x
-        lda dycp.text,x
+        ldy dycp_sinus,x
+        lda dycp_text,x
         tax
         lda FONT,x
         sta (ZP),y
@@ -335,7 +351,7 @@ do_irq
 dycp_scroll .proc
         lda #0
         sec
-        sbc #dycp.SCROLL_SPEED
+        sbc #DYCP_SCROLL_SPEED
         and #07
         sta dycp_scroll +1
         bcc +
@@ -343,26 +359,26 @@ dycp_scroll .proc
 +
         ; move text
         ldx #0
--       lda dycp.text + 1,x
-        sta dycp.text + 0 ,x
+-       lda dycp_text + 1,x
+        sta dycp_text + 0 ,x
         inx
         cpx #23
         bne -
 
-txtidx  lda dycp.scrolltext
+txtidx  lda dycp_scrolltext
         bmi end
         asl
         asl
         asl
-        sta dycp.text + 23
+        sta dycp_text + 23
         inc txtidx + 1
         bne +
         inc txtidx + 2
 +
         rts
 end
-        lda #<dycp.scrolltext
-        ldx #>dycp.scrolltext
+        lda #<dycp_scrolltext
+        ldx #>dycp_scrolltext
         sta txtidx + 1
         stx txtidx + 2
         rts
@@ -403,10 +419,10 @@ dycp_setup .proc
         tya
         ldx #0
 -
-row     sta @wdycp.MATRIX,x
-        adc #dycp.HEIGHT
+row     sta @wDYCP_MATRIX,x
+        adc #DYCP_HEIGHT
         inx
-        cpx #dycp.WIDTH
+        cpx #DYCP_WIDTH
         bne -
         lda row + 1
         adc #39 ; C = 1
@@ -415,27 +431,27 @@ row     sta @wdycp.MATRIX,x
         inc row +2
 +
         iny
-        cpy #dycp.HEIGHT
+        cpy #DYCP_HEIGHT
         bne --  ; C = 0
 
 
         ldx #0
         txa
--       sta dycp.CHARSET,x
-        sta dycp.CHARSET + 256,x
-        sta dycp.CHARSET + 512,x
+-       sta DYCP_CHARSET,x
+        sta DYCP_CHARSET + 256,x
+        sta DYCP_CHARSET + 512,x
         inx
         bne -
 
         ldx #23
 -       lda #0
-        sta dycp.sinus,x
-        sta dycp.text,x
+        sta dycp_sinus,x
+        sta dycp_text,x
         lda #3
-        sta $d800 + (dycp.MATRIX & $03ff),x
-        sta $d828 + (dycp.MATRIX & $03ff),x
-        sta $d850 + (dycp.MATRIX & $03ff),x
-        sta $d878 + (dycp.MATRIX & $03ff),x
+        sta $d800 + (DYCP_MATRIX & $03ff),x
+        sta $d828 + (DYCP_MATRIX & $03ff),x
+        sta $d850 + (DYCP_MATRIX & $03ff),x
+        sta $d878 + (DYCP_MATRIX & $03ff),x
 
         dex
         bpl -
@@ -447,7 +463,7 @@ dycp_update  .proc
         clc
 -
         lda ytable,y
-        sta dycp.sinus,x
+        sta dycp_sinus,x
         iny
         cpy #48
         bcc +
@@ -556,7 +572,7 @@ hexdigits .proc
 
         * = $22a8
 fcps2
-        lda #41
+        lda #40
         sec
         sbc vsp_idx +1
         sta offset + 1
@@ -569,18 +585,16 @@ offset  bne +
         stx $d011
         rts
 
+        .fill 256, 0
 
-
+        * = $4c00
 logo_setup .proc
         ldx #LOGO_WIDTH - 1
--       lda logo_colram,x
-        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 0,x
-        lda logo_colram + 20,x
-        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 40,x
-        lda logo_colram + 40,x
-        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 80,x
-        lda logo_colram + 60,x
-        sta $d800 +  LOGO_OFFSET + (LOGO_ROW * 40) + 120,x
+-
+.for row = 0, row < 4, row += 1
+        lda logo_colram + (row * LOGO_WIDTH),x
+        sta $d800 + LOGO_OFFSET + (row * 40),x
+.next
         dex
         bpl -
         rts
@@ -591,12 +605,12 @@ dycp_clear .proc
         ldx #0
         stx ZP + 2
 
-        lda #<dycp.CHARSET
+        lda #<DYCP_CHARSET
         sta ZP + 0
-        lda #>dycp.CHARSET
+        lda #>DYCP_CHARSET
         sta ZP + 1
 -
-        ldy dycp.sinus,x
+        ldy dycp_sinus,x
         lda #0
         ldx #4
 -       sta (ZP),y
@@ -617,7 +631,9 @@ dycp_clear .proc
         bne --
         rts
 .pend
-        *= $2d00
+
+        * = $2d00
+
 sprites_setup .proc
         lda #$c0
         sta $d015
@@ -659,10 +675,6 @@ sprites_setup .proc
 .binary format("%s", SID_PATH), $7e
 
 
-LOGO_OFFSET = 25
-LOGO_WIDTH = 20
-LOGO_ROW = 0
-
 ; $20c8-$21
 ; bitmap (interleave with code or data here)
         * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
@@ -678,7 +690,8 @@ LOGO_ROW = 0
         * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
 .for vram_row = 0, vram_row < 4, vram_row += 1
   .binary "focus.kla", 2 + 8000 + (vram_row * 40) + 0, LOGO_WIDTH
-  * += (40 - LOGO_WIDTH)
+  .fill 40 - LOGO_WIDTH, $00
+  ;* += (40 - LOGO_WIDTH)
 .next
 
 
@@ -696,22 +709,11 @@ vsp_table
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 
 
-dycp .block
-        MATRIX = $00f0 + 8
-        CHARSET = $2800
-        WIDTH = 24
-        HEIGHT = 4
-        SCROLL_SPEED = 1
-
-sinus = MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
-text = sinus+ 24 ; $178-$18f
-
 
         * = $4000
 
-scrolltext
+dycp_scrolltext
         .enc "screen"
         .text "hello world   focus rules   "
         .byte $1b, $1c, $1d, $1e, $1f
         .byte $ff
-.bend
