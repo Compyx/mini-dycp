@@ -7,3 +7,6 @@
 # final binary
 minidycp.prg
 
+# Maybe Awk shit?
+*.out
+

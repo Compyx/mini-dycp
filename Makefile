@@ -12,7 +12,7 @@ SOURCES = main.s dycp.s
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES)
-	$(ASM) $(AFLAGS) $< -o $@
+	$(ASM) $(AFLAGS) $< -o $@ | awk -f find-gaps.awk
 
 
 .PHONY: clean
