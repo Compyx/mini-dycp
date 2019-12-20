@@ -128,7 +128,19 @@ irq0a
         dec $d020
 
         jmp deicide
-
+        ;* = $23e8
+;        * = $4c00
+logo_setup .proc
+        ldx #LOGO_WIDTH - 1
+-
+.for row = 0, row < 4, row += 1
+        lda logo_colram + (row * LOGO_WIDTH),x
+        sta $d800 + LOGO_OFFSET + (row * 40),x
+.next
+        dex
+        bpl -
+        rts
+.pend
         * = $2168
 deicide
         lda #$b8
@@ -138,10 +150,10 @@ logo_d016
         sta $d016
         inc $d020
 
-delay   ldx #$16
+        ldx #$16
 -       dex
         bne -
-        lda #0
+        nop
 vsp_idx
         beq +
 +
@@ -179,48 +191,14 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
-        ;* = $23e8
-        * = $4800
-dycp_render .proc
-        ldx #0
-        stx ZP + 2
-        lda #<DYCP_CHARSET
-        sta ZP
-        lda #>DYCP_CHARSET
-        sta ZP + 1
--
-        ldy dycp_sinus,x
-        lda dycp_text,x
-        tax
-        lda FONT,x
-        sta (ZP),y
-        iny
-        lda FONT+1,x
-        sta (ZP),y
-        iny
-        lda FONT+2,x
-        sta (ZP),y
-        iny
-        lda FONT+3,x
-        sta (ZP),y
-        iny
-        lda FONT+4,x
-        sta (ZP),y
-
-        lda ZP
-        clc
-        adc #4*8
-        sta ZP
-        bcc +
-        inc ZP +1
-+
-        inc ZP + 2
-        ldx ZP + 2
-        cpx  #24
+; Run delay loop decrementing X
+;
+; Adds 6 for JSR and 6 for the RTS, Z will be 0
+delay_with_x .proc
+-       dex
         bne -
         rts
 .pend
-
 
 
         *= $2b00
@@ -584,20 +562,6 @@ offset  bne +
         stx $d011
         rts
 
-        .fill 256, 0
-
-        * = $4c00
-logo_setup .proc
-        ldx #LOGO_WIDTH - 1
--
-.for row = 0, row < 4, row += 1
-        lda logo_colram + (row * LOGO_WIDTH),x
-        sta $d800 + LOGO_OFFSET + (row * 40),x
-.next
-        dex
-        bpl -
-        rts
-.pend
 
 
 dycp_clear .proc
@@ -672,6 +636,48 @@ sprites_setup .proc
         sta $d00f
         rts
 .pend
+
+;* = $4800
+dycp_render .proc
+        ldx #0
+        stx ZP + 2
+        lda #<DYCP_CHARSET
+        sta ZP
+        lda #>DYCP_CHARSET
+        sta ZP + 1
+-
+        ldy dycp_sinus,x
+        lda dycp_text,x
+        tax
+        lda FONT,x
+        sta (ZP),y
+        iny
+        lda FONT+1,x
+        sta (ZP),y
+        iny
+        lda FONT+2,x
+        sta (ZP),y
+        iny
+        lda FONT+3,x
+        sta (ZP),y
+        iny
+        lda FONT+4,x
+        sta (ZP),y
+
+        lda ZP
+        clc
+        adc #4*8
+        sta ZP
+        bcc +
+        inc ZP +1
++
+        inc ZP + 2
+        ldx ZP + 2
+        cpx  #24
+        bne -
+        rts
+.pend
+
 
 
 

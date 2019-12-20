@@ -1,7 +1,7 @@
 # vim: set noet ts=8:
 
 ASM = 64tass
-AFLAGS = --case-sensitive --ascii --m6502 -Wshadow \
+AFLAGS = --case-sensitive --ascii --m6502 -Wshadow -Wbranch-page \
 	 --vice-labels --labels labels.txt
 
 PROGRAM = minidycp.prg
