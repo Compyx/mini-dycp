@@ -21,7 +21,7 @@
         dycp_sinus = DYCP_MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
         dycp_text = dycp_sinus+ 24 ; $178-$18f
 
-        DYCP_MATRIX = $00f0 + 8
+        DYCP_MATRIX = $00f0 + 8 + 40
         DYCP_CHARSET = $2800
         DYCP_WIDTH = 24
         DYCP_HEIGHT = 4
@@ -182,6 +182,8 @@ vsp_idx
         dex
         bpl -
 .fi
+        dec $d020
+        jsr update_fld
 
         lda #0
         sta $d020
@@ -213,6 +215,7 @@ irq1
         lda #<irq1a
         ldx #>irq1a
         ldy #$32 + 5 * 8 - 1
+
         sty $d012
         sta $fffe
         stx $ffff
@@ -244,16 +247,27 @@ delay3_minor
         bit $ea
         jsr fcps2
 ;        .fill 12, $ea
-        lda #$15
-        sta $d018
+       lda fld +1
+        clc
+        adc #$62
+        sta $d009
+        sta $d00b
+        sta $d00d
+        sta $d00f
+        jsr fld
+       ldx dycp_scroll + 1
+
         lda #$0a
-        ldx dycp_scroll + 1
+        sta $d018
+ 
         stx $d016
-        ; TODO: good place to do sprite-Y stuff when also doing FLD etc
-        ldx #$38
+        lda #$f0
+        sta $d015
+ 
+        ; TODO: good place to do sprite-Y stuff when also doing FLD et
+        ldx #$34
 -       dex
         bpl -
-        sta $d018
         lda #6
 
         sta $d020
@@ -273,6 +287,8 @@ delay3_minor
         ;lda #$1b
         ;sta $d011
         lda #$32+ (6+4) * 8 -3
+        clc
+        adc fld +1
         tay
         lda #<irq2
         ldx #>irq2
@@ -284,16 +300,21 @@ irq2
         pha
         tya
         pha
-        lda #0
-        sta $d021
-        ldx #20
+        ldx #24
 -       dex
         bpl -
+        lda #0
+        sta $d021
+        sta $d020
+        sta $d015
+ 
         lda #$15
         sta $d018
         lda #$08
         sta $d016
 
+        lda #$1b
+        sta $d011
 
 
         jsr dycp_clear
@@ -325,41 +346,6 @@ do_irq
         pla
         rti
 
-dycp_scroll .proc
-        lda #0
-        sec
-        sbc #DYCP_SCROLL_SPEED
-        and #07
-        sta dycp_scroll +1
-        bcc +
-        rts
-+
-        ; move text
-        ldx #0
--       lda dycp_text + 1,x
-        sta dycp_text + 0 ,x
-        inx
-        cpx #23
-        bne -
-
-txtidx  lda dycp_scrolltext
-        bmi end
-        asl
-        asl
-        asl
-        sta dycp_text + 23
-        inc txtidx + 1
-        bne +
-        inc txtidx + 2
-+
-        rts
-end
-        lda #<dycp_scrolltext
-        ldx #>dycp_scrolltext
-        sta txtidx + 1
-        stx txtidx + 2
-        rts
-.pend
         * = $2528
 
 vsp_update
@@ -629,11 +615,7 @@ sprites_setup .proc
         sta $d00e
         lda #$c0
         sta $d010
-        lda #$60
-        sta $d009
-        sta $d00b
-        sta $d00d
-        sta $d00f
+
         rts
 .pend
 
@@ -678,6 +660,41 @@ dycp_render .proc
         rts
 .pend
 
+dycp_scroll .proc
+        lda #0
+        sec
+        sbc #DYCP_SCROLL_SPEED
+        and #07
+        sta dycp_scroll +1
+        bcc +
+        rts
++
+        ; move text
+        ldx #0
+-       lda dycp_text + 1,x
+        sta dycp_text + 0 ,x
+        inx
+        cpx #23
+        bne -
+
+txtidx  lda dycp_scrolltext
+        bmi end
+        asl
+        asl
+        asl
+        sta dycp_text + 23
+        inc txtidx + 1
+        bne +
+        inc txtidx + 2
++
+        rts
+end
+        lda #<dycp_scrolltext
+        ldx #>dycp_scrolltext
+        sta txtidx + 1
+        stx txtidx + 2
+        rts
+.pend
 
 
 
@@ -723,6 +740,33 @@ vsp_table
 
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 
+        fld     .proc
+        ldx #1
+-       lda $d012
+-       cmp $d012
+        beq -
+        clc
+        lda $d011
+        adc #1
+        and #$07
+        ora #$18
+        sta $d011
+        dex
+        bpl --
+        rts
+.pend
+update_fld .proc
+        ldx #$30
+        cpx #64
+        bcc +
+        ldx #0
++
+        lda vsp_table,x
+        sta fld + 1
+        inx
++       stx update_fld +1
+        rts
+.pend
 
 
         * = $4000
@@ -732,3 +776,7 @@ dycp_scrolltext
         .text "hello world   focus rules   "
         .byte $1b, $1c, $1d, $1e, $1f
         .byte $ff
+
+
+
+
