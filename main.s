@@ -5,7 +5,7 @@
 ; $2800-$2aff = dycp (filled)
 ; $2c00-$2c9f = bitmap logo vidram (cannot add code there)
 ;
-        SID_ENABLE= 0
+        SID_ENABLE= 1
         SID_LOAD = $1000
         SID_PATH = "Plaster.sid"
         SID_INIT = SID_LOAD + 0
@@ -263,17 +263,16 @@ delay3_minor
 ;        bit $ea         ; 3
 
         nop
-        nop
-        nop
+        bit $ea
         jsr fcps2
 ;        .fill 12, $ea
-        inc $d020
-        lda #$1b
-        sta $d011
+        lda #$15
+        sta $d018
         lda #$0a
         ldx dycp_scroll + 1
         stx $d016
-        ldx #$30
+        ; TODO: good place to do sprite-Y stuff when also doing FLD etc
+        ldx #$38
 -       dex
         bpl -
         sta $d018
@@ -635,7 +634,7 @@ dycp_clear .proc
         * = $2d00
 
 sprites_setup .proc
-        lda #$c0
+        lda #$f0
         sta $d015
         sta $d017
         sta $d01d
@@ -644,21 +643,31 @@ sprites_setup .proc
 -       sta FILL_SPRITE,x
         dex
         bpl -
-        lda #7
+        lda #6
+        sta $d027 + 4
+        sta $d027 + 5
         sta $d027 + 6
         sta $d027 + 7
 
         lda #(FILL_SPRITE /64)
+        sta $03fc
+        sta $03fd
         sta $03fe
         sta $03ff
 
-        lda #$30
-        sta $d00c
+        lda #$18        ; 3
+        sta $d008
+        lda #$30        ; 3
+        sta $d00a
         lda #$18
+        sta $d00c
+        lda #$40
         sta $d00e
-        lda #$80
+        lda #$c0
         sta $d010
         lda #$60
+        sta $d009
+        sta $d00b
         sta $d00d
         sta $d00f
         rts
