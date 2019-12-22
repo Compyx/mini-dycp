@@ -18,14 +18,18 @@
 
         RASTER = $2d
 
-        dycp_sinus = DYCP_MATRIX - 8 + (40 * 4)   ; $c8 - 8 + $a0 = $160-$177
-        dycp_text = dycp_sinus+ 24 ; $178-$18f
-
-        DYCP_MATRIX = $00f0 + 8 + 40
+        DYCP_MATRIX = $00f0 + 8 + 40    ; $0120-$01bf
         DYCP_CHARSET = $2800
         DYCP_WIDTH = 24
         DYCP_HEIGHT = 4
         DYCP_SCROLL_SPEED = 1
+
+        ; $120 - 8 + (4*40) = $1b8
+        dycp_sinus = DYCP_MATRIX - 8 + (40 * 4)
+        ; $1b8 + 24 = $1d0
+        ; text is 24 bytes: $
+        dycp_text = dycp_sinus+ 24 ; $01d0-$01f7
+
 
         LOGO_OFFSET = 25
         LOGO_WIDTH = 20
@@ -249,38 +253,53 @@ delay3_minor
 ;        .fill 12, $ea
        lda fld +1
         clc
-        adc #$62
+        adc #$63
         sta $d009
         sta $d00b
         sta $d00d
         sta $d00f
+        adc #32  - 21
+        sta $d001
+        sta $d003
+        sta $d005
+        sta $d007
         jsr fld
-       ldx dycp_scroll + 1
 
-        lda #$0a
-        sta $d018
- 
-        stx $d016
-        lda #$f0
-        sta $d015
- 
-        ; TODO: good place to do sprite-Y stuff when also doing FLD et
-        ldx #$34
--       dex
-        bpl -
-        lda #6
-
+        lda #$05
         sta $d020
         sta $d021
+        lda #$b8
+        sta $d018
+        lda #08
+        sta $d016
 
+       lda #$ff
+        sta $d015
+ 
+       lda $d011
+        and #$1f
+        sta $d011
+        lda #6
+         ; TODO: good place to do sprite-Y stuff when also doing FLD et
+        ldx #$3c
+-       dex
+        bpl -
+ 
+        sta $d020
+        sta $d021
+        ldx dycp_scroll + 1
+        lda #$0a
+        sta $d018
+        stx $d016
+ 
 
         ;ldx #$08
         ;stx $d016
         ;lda #$08
         ;sta $d018
-        sta $d020
-        lda #4
-        sta $d020
+;;        sta $d020
+;        lda #4
+;        sta $d020
 
 
 
@@ -584,36 +603,49 @@ dycp_clear .proc
         * = $2d00
 
 sprites_setup .proc
-        lda #$f0
+        lda #$ff
         sta $d015
-        sta $d017
         sta $d01d
         ldx #$3e
         lda #$ff
 -       sta FILL_SPRITE,x
         dex
         bpl -
-        lda #6
+        lda #7
         sta $d027 + 4
         sta $d027 + 5
         sta $d027 + 6
         sta $d027 + 7
+        lda #$03
+        sta $d027 + 0
+        sta $d027 + 1
+        sta $d027 + 2
+        sta $d027 + 3
+
 
         lda #(FILL_SPRITE /64)
+        sta $03f8
+        sta $03f9
+        sta $03fa
+        sta $03fb
         sta $03fc
         sta $03fd
         sta $03fe
         sta $03ff
 
         lda #$18        ; 3
+        sta $d000
         sta $d008
         lda #$30        ; 3
         sta $d00a
+        sta $d002
         lda #$18
         sta $d00c
+        sta $d004
         lda #$40
+        sta $d006
         sta $d00e
-        lda #$c0
+        lda #$cc
         sta $d010
 
         rts
@@ -740,19 +772,21 @@ vsp_table
 
 ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
 
-        fld     .proc
-        ldx #1
--       lda $d012
--       cmp $d012
-        beq -
+
+
+fld     .proc
+        ldx #0
+        ldy #0
         clc
-        lda $d011
+-       lda $d012
         adc #1
         and #$07
-        ora #$18
-        sta $d011
+        ora #$78
+        sta $d011,y
+        ;sta $d020
+;        sta $d020
         dex
-        bpl --
+        bpl -
         rts
 .pend
 update_fld .proc
