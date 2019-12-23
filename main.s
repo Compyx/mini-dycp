@@ -330,24 +330,11 @@ irq2
         lda #$7b
         sta $d011
 
+        ldy #$f9
+        lda #<irq3
+        ldx #>irq3
+        jmp do_irq
 
-        jsr dycp_clear
-        dec $d020
-        jsr dycp_update
-        dec $d020
-        jsr dycp_scroll
-        dec $d020
-        jsr dycp_render
-        dec $d020
-        ;jsr handle_delay
-        jsr vsp_update
-        ;jsr show_delay
-        lda #5
-        sta $d020
-
-        lda #<irq0
-        ldx #>irq0
-        ldy #RASTER
 do_irq
         sta $fffe
         stx $ffff
@@ -806,4 +793,31 @@ dycp_scrolltext
         .byte $1b, $1c, $1d, $1e, $1f
         .byte $ff
 
+        .align 256
+irq3
+        pha
+        txa
+        pha
+        tya
+        pha
+        ldx #$03
+-       dex
+        bne -
+        lda #5
+        sta $d020
+        sta $d021
+;        dec $d020
+        jsr dycp_clear
+        jsr dycp_update
+        jsr dycp_scroll
+        jsr dycp_render
+        ;jsr handle_delay
+        jsr vsp_update
+        ;jsr show_delay
+ ;       lda #5
+ ;       sta $d020
 
+        lda #<irq0
+        ldx #>irq0
+        ldy #RASTER
+        jmp do_irq
