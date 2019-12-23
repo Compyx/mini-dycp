@@ -10,7 +10,19 @@
 #
 function is_reserved_space(addr_lo, addr_hi)
 {
-    printf("Got lo = $%04x, hi = $%04x\n", addr_lo, addr_hi)
+    printf("Got lo = $%04x, hi = $%04x ... ", addr_lo, addr_hi - 1)
+
+    if ((addr_lo >= SID_LO) && (addr_lo <= VIDRAM_HI)) {
+        print "reserved"
+        return 1
+    }
+    if ((addr_hi >= SID_LO && addr_hi <= VIDRAM_HI)) {
+        print "Reserverd"
+        return 1
+    }
+    print "free"
+
+    return 0
     # check music
     if (addr_lo >= SID_LO && addr_hi < SID_HI) {
         return 1
@@ -42,11 +54,11 @@ BEGIN {
 
     BASE_ADDR = 8192
 
-    SID_LO = BASE_ADDR + 6 * 256 - 1
+    SID_LO = BASE_ADDR + 6 * 256
     SID_HI = SID_LO + 512 - 1
-    DYCP_LO = BASE_ADDR + 8 * 256 -1
+    DYCP_LO = BASE_ADDR + 8 * 256
     DYCP_HI = DYCP_LO + 3 *256 -1
-    VIDRAM_LO = BASE_ADDR + 12 * 256 - 1
+    VIDRAM_LO = BASE_ADDR + 12 * 256
     VIDRAM_HI = VIDRAM_LO + 3 * 256 - 1
 }
 

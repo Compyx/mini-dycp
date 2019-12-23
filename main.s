@@ -129,7 +129,9 @@ irq0a
         cmp $d012
         beq +
 +
-        dec $d020
+        lda #0
+        sta $d020
+        sta $d021
 
         jmp deicide
         ;* = $23e8
@@ -152,12 +154,12 @@ deicide
 logo_d016
         lda #$18
         sta $d016
-        inc $d020
+        inc $d030
 
-        ldx #$16
+        ldx #$15
 -       dex
         bne -
-        nop
+        bit $ea
 vsp_idx
         beq +
 +
@@ -169,7 +171,7 @@ vsp_idx
         sta $d011
         stx $d011
 
-        lda #5
+        lda #0
         sta $d020
 .if SID_ENABLE
         ldx #$0f
@@ -186,7 +188,7 @@ vsp_idx
         dex
         bpl -
 .fi
-        dec $d020
+;        dec $d020
         jsr update_fld
 
         lda #0
@@ -253,25 +255,17 @@ delay3_minor
 ;        .fill 12, $ea
        lda fld +1
         clc
-        adc #$63
+        adc #$64
         sta $d009
         sta $d00b
         sta $d00d
         sta $d00f
-        adc #32  - 21
+        adc #32  - 24
         sta $d001
         sta $d003
         sta $d005
         sta $d007
         jsr fld
-
-        lda #$05
-        sta $d020
-        sta $d021
-        lda #$b8
-        sta $d018
-        lda #08
-        sta $d016
 
        lda #$ff
         sta $d015
@@ -279,19 +273,24 @@ delay3_minor
        lda $d011
         and #$1f
         sta $d011
+
+        ldx dycp_scroll + 1
+
+       stx $d016
+
         lda #6
          ; TODO: good place to do sprite-Y stuff when also doing FLD et
-        ldx #$3c
+        ldx #$51
 -       dex
-        bpl -
+        bne -
+        ldy #$0a
+        sty $d018
  
-        sta $d020
-        sta $d021
-        ldx dycp_scroll + 1
-        lda #$0a
-        sta $d018
-        stx $d016
+         sta $d021
+        sta $d020,x     ; + 1 cycle
  
+        
+
 
         ;ldx #$08
         ;stx $d016
@@ -305,7 +304,7 @@ delay3_minor
 
         ;lda #$1b
         ;sta $d011
-        lda #$32+ (6+4) * 8 -3
+        lda #$32+ (6+4) * 8 -1
         clc
         adc fld +1
         tay
@@ -319,20 +318,16 @@ irq2
         pha
         tya
         pha
-        ldx #24
+        ldx #5
 -       dex
-        bpl -
-        lda #0
-        sta $d021
-        sta $d020
-        sta $d015
+        bne -
+        stx $d021
+        nop
+        nop
+        nop
+        stx $d020
  
-        lda #$15
-        sta $d018
-        lda #$08
-        sta $d016
-
-        lda #$1b
+        lda #$7b
         sta $d011
 
 
@@ -347,7 +342,7 @@ irq2
         ;jsr handle_delay
         jsr vsp_update
         ;jsr show_delay
-        lda #0
+        lda #5
         sta $d020
 
         lda #<irq0
@@ -429,7 +424,7 @@ row     sta @wDYCP_MATRIX,x
 -       lda #0
         sta dycp_sinus,x
         sta dycp_text,x
-        lda #3
+        lda #$0d
         sta $d800 + (DYCP_MATRIX & $03ff),x
         sta $d828 + (DYCP_MATRIX & $03ff),x
         sta $d850 + (DYCP_MATRIX & $03ff),x
@@ -611,12 +606,12 @@ sprites_setup .proc
 -       sta FILL_SPRITE,x
         dex
         bpl -
-        lda #7
+        lda #6
         sta $d027 + 4
         sta $d027 + 5
         sta $d027 + 6
         sta $d027 + 7
-        lda #$03
+        lda #$06
         sta $d027 + 0
         sta $d027 + 1
         sta $d027 + 2
@@ -767,10 +762,10 @@ logo_colram
 .next
 
 vsp_table
-        .byte 64 + 63.5 * sin(range(64) * rad(360.0/64.0))
+        .byte 56 + 55.5 * sin(range(64) * rad(360.0/64.0))
 
 
-ytable  .byte 12 + 11.5 * sin(range(48) * rad(360.0/48.0))
+ytable  .byte 11 + 10.5 * sin(range(48) * rad(360.0/48.0)) + 1
 
 
 
@@ -810,7 +805,5 @@ dycp_scrolltext
         .text "hello world   focus rules   "
         .byte $1b, $1c, $1d, $1e, $1f
         .byte $ff
-
-
 
 
