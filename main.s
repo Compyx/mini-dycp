@@ -10,6 +10,8 @@
         SID_PATH = "Plaster.sid"
         SID_INIT = SID_LOAD + 0
         SID_PLAY = SID_LOAD + 3
+        SID_TEMP = $2600
+
 
         ZP_TMP = $10
         ZP = $20
@@ -53,17 +55,17 @@ trigger_irq .macro
 
         * = $2000
 start
+        cld
         lda #0
         sta $0286
         jsr $e536
         sei
         ldx #$ff
         txs
-        cld
+ ;       stx $d015
+  ;      stx $d01d
         lda #$35
         sta $01
-        lda #$06
-        sta $d020
         lda #$7f
         sta $dc0d
         sta $dd0d
@@ -85,6 +87,7 @@ start
 
         stx $d01a
 
+        jsr swap_sid
         jsr logo_setup
         jsr dycp_setup
         jsr sprites_setup
@@ -101,8 +104,10 @@ start
 -       lda $dc01
         and #$10
         bne -
+        sei
         lda #$37
         sta $01
+        jsr swap_sid
         jmp $fce2
 irq0
         pha
@@ -137,6 +142,7 @@ irq0a
         sta $d021
 
         jmp deicide
+
         ;* = $23e8
 ;        * = $4c00
 logo_setup .proc
@@ -150,6 +156,8 @@ logo_setup .proc
         bpl -
         rts
 .pend
+
+
         * = $2168
 deicide
         lda #$b8
@@ -202,14 +210,6 @@ vsp_idx
         ldx #>irq1
         jmp do_irq
 
-; Run delay loop decrementing X
-;
-; Adds 6 for JSR and 6 for the RTS, Z will be 0
-delay_with_x .proc
--       dex
-        bne -
-        rts
-.pend
 update_fld .proc
         ldx #$30
         cpx #64
@@ -224,9 +224,58 @@ update_fld .proc
 .pend
 
 
+; DYCP scroller, just 256 byte max, we're doing 4KB here :)
+dycp_scroll .proc
+        lda #0
+        sec
+        sbc #DYCP_SCROLL_SPEED
+        and #07
+        sta dycp_scroll +1
+        bcc +
+        rts
++
+        ; move text
+        ldx #0
+-       lda dycp_text + 1,x
+        sta dycp_text + 0 ,x
+        inx
+        cpx #23
+        bne -
+
+txtidx  ldx #0
+        lda dycp_scrolltext,x
+        bne +
+        sta txtidx + 1
++
+        asl
+        asl
+        asl
+        sta dycp_text + 23
+
+        inc txtidx + 1
+        rts
+.pend
+
+fld     .proc
+        ldx #0
+        ldy #0
+        clc
+-       lda $d012
+        adc #1
+        and #$07
+        ora #$78
+        sta $d011,y
+        ;sta $d020
+;        sta $d020
+        dex
+        bpl -
+        rts
+.pend
+
+
+
 
         *= $2b00
-        ; *= $4000
 irq1
         pha
         txa
@@ -275,30 +324,23 @@ delay3_major
         sta $d007
         jsr fld
 
-       lda #$ff
-        sta $d015
- 
-       lda $d011
+        lda $d011
         and #$1f
         sta $d011
 
         ldx dycp_scroll + 1
-
-       stx $d016
+        stx $d016
 
         lda #6
          ; TODO: good place to do sprite-Y stuff when also doing FLD et
-        ldx #$51
+        ldx #$52
 -       dex
         bne -
         ldy #$0a
         sty $d018
- 
-         sta $d021
-        sta $d020,x     ; + 1 cycle
- 
-        
-
+nop
+        sta $d021
+        sta $d020
 
         ;ldx #$08
         ;stx $d016
@@ -334,7 +376,7 @@ irq2
         nop
         nop
         stx $d020
- 
+
         lda #$7b
         sta $d011
 
@@ -381,6 +423,8 @@ irq3
         ldx #>irq0
         ldy #RASTER
         jmp do_irq
+
+
         * = $2528
 
 vsp_update
@@ -418,7 +462,7 @@ dycp_setup .proc
         tya
         ldx #0
 -
-row     sta @wDYCP_MATRIX,x
+row     sta @wDYCP_MATRIX,x     ; used to be zero page
         adc #DYCP_HEIGHT
         inx
         cpx #DYCP_WIDTH
@@ -617,14 +661,15 @@ dycp_clear .proc
         rts
 .pend
 
+
+
         * = $2ce8
 
 sprites_setup .proc
+        ldx #$3e
         lda #$ff
         sta $d015
         sta $d01d
-        ldx #$3e
-        lda #$ff
 -       sta FILL_SPRITE,x
         dex
         bpl -
@@ -653,6 +698,8 @@ sprites_setup .proc
 
         rts
 .pend
+
+
 
 ; colram
 ;        * = $2e00
@@ -709,46 +756,34 @@ dycp_render .proc
         rts
 .pend
 
-; DYCP scroller, just 256 byte max, we're doing 4KB here :)
-dycp_scroll .proc
-        lda #0
-        sec
-        sbc #DYCP_SCROLL_SPEED
-        and #07
-        sta dycp_scroll +1
-        bcc +
-        rts
-+
-        ; move text
+
+swap_sid .proc
         ldx #0
--       lda dycp_text + 1,x
-        sta dycp_text + 0 ,x
+-       lda $2600,x
+        ldy $1000,x
+        sta $1000,x
+        tya
+        sta $2600,x
+        lda $2700,x
+        ldy $1100,x
+        sta $1100,x
+        tya
+        sta $2700,x
         inx
-        cpx #23
         bne -
-
-txtidx  ldx #0
-        lda dycp_scrolltext,x
-        bne +
-        sta txtidx + 1
-+
-        asl
-        asl
-        asl
-        sta dycp_text + 23
-
-        inc txtidx + 1
         rts
 .pend
 
 
 
-        * = $2f00
+
+;        * = $2f00
         FONT = *
 .binary "font000.prg", 2
 
 
-        * = SID_LOAD
+;        * = SID_LOAD
+        * = SID_TEMP
 .binary format("%s", SID_PATH), $7e
 
 
@@ -774,22 +809,6 @@ txtidx  ldx #0
 
 
 
-fld     .proc
-        ldx #0
-        ldy #0
-        clc
--       lda $d012
-        adc #1
-        and #$07
-        ora #$78
-        sta $d011,y
-        ;sta $d020
-;        sta $d020
-        dex
-        bpl -
-        rts
-.pend
-
         * = $4000
 
 ; $1b = .
@@ -807,4 +826,7 @@ dycp_scrolltext
         .text " ", 0
 
         .align 256
+
+
+
 
