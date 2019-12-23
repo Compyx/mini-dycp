@@ -12,7 +12,8 @@ SOURCES = main.s dycp.s
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES) focus.kla find-gaps.awk
-	$(ASM) $(AFLAGS) $< -o $@ | awk -f find-gaps.awk
+	#$(ASM) $(AFLAGS) $< -o $@ | awk -f find-gaps.awk
+	$(ASM) $(AFLAGS) $< -o $@
 
 
 .PHONY: clean

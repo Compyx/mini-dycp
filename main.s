@@ -84,23 +84,26 @@ start
         sta $d018
 
         stx $d01a
-        dex
-        stx $d021
 
         jsr logo_setup
         jsr dycp_setup
         jsr sprites_setup
 .if SID_ENABLE
-        ldx #$0f
--       lda $f0,x
-        sta ZP_TMP,x
-        dex
-        bpl -
+ ;       ldx #$0f
+-;       lda $f0,x
+ ;       sta ZP_TMP,x
+ ;       dex
+ ;       bpl -
         jsr SID_INIT
 .fi
         cli
-
-        jmp *
+        ; Le barre d'espacement
+-       lda $dc01
+        and #$10
+        bne -
+        lda #$37
+        sta $01
+        jmp $fce2
 irq0
         pha
         txa
@@ -154,16 +157,16 @@ deicide
 logo_d016
         lda #$18
         sta $d016
-        inc $d030
 
-        ldx #$15
+        ldx #$16
 -       dex
         bne -
-        bit $ea
+        nop
+        nop
 vsp_idx
         beq +
 +
-        .fill 40, $e0
+        .fill 20, $e0
         bit $ea
 
         lda #$39
@@ -171,28 +174,28 @@ vsp_idx
         sta $d011
         stx $d011
 
-        lda #0
-        sta $d020
+        ;lda #0
+        ;sta $d020
 .if SID_ENABLE
-        ldx #$0f
--       lda ZP_TMP,x
-        sta $f0,x
-        dex
-        bpl -
+;        ldx #$0f
+;-       lda ZP_TMP,x
+;        sta $f0,x
+;        dex
+;        bpl -
 
         jsr SID_PLAY
 
-        ldx #$0f
--       lda $f0,x
-        sta ZP_TMP,x
-        dex
-        bpl -
+;        ldx #$0f
+;-       lda $f0,x
+;        sta ZP_TMP,x
+;        dex
+;        bpl -
 .fi
 ;        dec $d020
         jsr update_fld
 
-        lda #0
-        sta $d020
+;        lda #0
+;        sta $d020
 
         ldy #$32 + 5* 8  - 2
         lda #<irq1
@@ -207,6 +210,19 @@ delay_with_x .proc
         bne -
         rts
 .pend
+update_fld .proc
+        ldx #$30
+        cpx #64
+        bcc +
+        ldx #0
++
+        lda vsp_table,x
+        sta fld + 1
+        inx
++       stx update_fld +1
+        rts
+.pend
+
 
 
         *= $2b00
@@ -240,17 +256,9 @@ irq1a
         beq +
 +
 delay3_major
-        ldx #3
+        ldx #4
 -       dex
         bne -
-delay3_minor
-;        beq *+2         ; 3
-;        cpx #$e0        ; 2
-;        cpx #$e0        ; 2
-;        bit $ea         ; 3
-
-        nop
-        bit $ea
         jsr fcps2
 ;        .fill 12, $ea
        lda fld +1
@@ -390,6 +398,7 @@ vsp_update
         lda #40
         sec
 _tmp    sbc #0
+        sbc #20
         sta vsp_idx + 1
 
         lda vsp_update + 1
@@ -562,7 +571,7 @@ hexdigits .proc
 
         * = $22a8
 fcps2
-        lda #40
+        lda #20
         sec
         sbc vsp_idx +1
         sta offset + 1
@@ -608,7 +617,7 @@ dycp_clear .proc
         rts
 .pend
 
-        * = $2d00
+        * = $2ce8
 
 sprites_setup .proc
         lda #$ff
@@ -619,38 +628,24 @@ sprites_setup .proc
 -       sta FILL_SPRITE,x
         dex
         bpl -
-        lda #6
-        sta $d027 + 4
-        sta $d027 + 5
-        sta $d027 + 6
-        sta $d027 + 7
-        lda #$06
-        sta $d027 + 0
-        sta $d027 + 1
-        sta $d027 + 2
-        sta $d027 + 3
-
-
-        lda #(FILL_SPRITE /64)
-        sta $03f8
-        sta $03f9
-        sta $03fa
-        sta $03fb
-        sta $03fc
-        sta $03fd
-        sta $03fe
-        sta $03ff
+        ldx #7
+-       lda #6
+        sta $d027,x
+        lda #(FILL_SPRITE/64)
+        sta $03f8,x
+        dex
+        bpl -
 
         lda #$18        ; 3
         sta $d000
         sta $d008
+        sta $d00c
+        sta $d004
+
         lda #$30        ; 3
         sta $d00a
         sta $d002
-        lda #$18
-        sta $d00c
-        sta $d004
-        lda #$40
+;        lda #$40
         sta $d006
         sta $d00e
         lda #$cc
@@ -658,6 +653,20 @@ sprites_setup .proc
 
         rts
 .pend
+
+; colram
+;        * = $2e00
+logo_colram
+.for cram_row = 0, cram_row < 4, cram_row += 1
+  .binary "focus.kla", 2 + 9000 + (cram_row * 40) + 0, LOGO_WIDTH
+.next
+
+vsp_table
+        .byte 56 + 55.5 * sin(range(64) * rad(360.0/64.0))
+
+
+ytable  .byte 11 + 10.5 * sin(range(48) * rad(360.0/48.0)) + 1
+
 
 ;* = $4800
 dycp_render .proc
@@ -700,6 +709,7 @@ dycp_render .proc
         rts
 .pend
 
+; DYCP scroller, just 256 byte max, we're doing 4KB here :)
 dycp_scroll .proc
         lda #0
         sec
@@ -717,22 +727,17 @@ dycp_scroll .proc
         cpx #23
         bne -
 
-txtidx  lda dycp_scrolltext
-        bmi end
+txtidx  ldx #0
+        lda dycp_scrolltext,x
+        bne +
+        sta txtidx + 1
++
         asl
         asl
         asl
         sta dycp_text + 23
+
         inc txtidx + 1
-        bne +
-        inc txtidx + 2
-+
-        rts
-end
-        lda #<dycp_scrolltext
-        ldx #>dycp_scrolltext
-        sta txtidx + 1
-        stx txtidx + 2
         rts
 .pend
 
@@ -767,19 +772,6 @@ end
 .next
 
 
-; colram
-        * = $2e00
-logo_colram
-.for cram_row = 0, cram_row < 4, cram_row += 1
-  .binary "focus.kla", 2 + 9000 + (cram_row * 40) + 0, LOGO_WIDTH
-.next
-
-vsp_table
-        .byte 56 + 55.5 * sin(range(64) * rad(360.0/64.0))
-
-
-ytable  .byte 11 + 10.5 * sin(range(48) * rad(360.0/48.0)) + 1
-
 
 
 fld     .proc
@@ -797,19 +789,6 @@ fld     .proc
         bpl -
         rts
 .pend
-update_fld .proc
-        ldx #$30
-        cpx #64
-        bcc +
-        ldx #0
-+
-        lda vsp_table,x
-        sta fld + 1
-        inx
-+       stx update_fld +1
-        rts
-.pend
-
 
         * = $4000
 
