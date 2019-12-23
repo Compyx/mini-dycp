@@ -330,7 +330,7 @@ irq2
         lda #$7b
         sta $d011
 
-        ldy #$f9
+        ldy #$fb
         lda #<irq3
         ldx #>irq3
         jmp do_irq
@@ -346,7 +346,33 @@ do_irq
         tax
         pla
         rti
+irq3
+        pha
+        txa
+        pha
+        tya
+        pha
+        ldx #$07
+-       dex
+        bne -
+        lda #5
+        sta $d020
+        sta $d021
+;        dec $d020
+        jsr dycp_clear
+        jsr dycp_update
+        jsr dycp_scroll
+        jsr dycp_render
+        ;jsr handle_delay
+        jsr vsp_update
+        ;jsr show_delay
+ ;       lda #5
+ ;       sta $d020
 
+        lda #<irq0
+        ldx #>irq0
+        ldy #RASTER
+        jmp do_irq
         * = $2528
 
 vsp_update
@@ -787,37 +813,19 @@ update_fld .proc
 
         * = $4000
 
+; $1b = .
+; $1c = ,
+; $1d = '
+; $1e = + (for cracks)
+; $1f = % (for cracks)
 dycp_scrolltext
         .enc "screen"
-        .text "hello world   focus rules   "
-        .byte $1b, $1c, $1d, $1e, $1f
-        .byte $ff
+        .text "four kilobytes kinda sucks", $1c
+        .text "but i decided to get at least some graphics and lame effects "
+        .text "in this", $1b
+        .text "  so here we have a bitmap logo vsp and a dycp", $1b
+        .text "  ", $1e,$1e,$1e, "focus rules", $1e,$1e,$1e
+        .text " ", 0
 
         .align 256
-irq3
-        pha
-        txa
-        pha
-        tya
-        pha
-        ldx #$03
--       dex
-        bne -
-        lda #5
-        sta $d020
-        sta $d021
-;        dec $d020
-        jsr dycp_clear
-        jsr dycp_update
-        jsr dycp_scroll
-        jsr dycp_render
-        ;jsr handle_delay
-        jsr vsp_update
-        ;jsr show_delay
- ;       lda #5
- ;       sta $d020
 
-        lda #<irq0
-        ldx #>irq0
-        ldy #RASTER
-        jmp do_irq
