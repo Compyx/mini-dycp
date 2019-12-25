@@ -831,12 +831,12 @@ swap_sid .proc
 ; $1f = % (for cracks)
 dycp_scrolltext
         .enc "screen"
-        .text "four kb kinda sucks", $1c
+        .text "        four kb kinda sucks", $1c
         .text " but i decided to get at least some lame graphics and effects "
         .text "in this", $1b
         .text "   so here we have a bitmap vsp and a small dycp", $1b
         .text "  ", $1e,$1e,$1e, "focus rules", $1e,$1e,$1e
-        .text "  wrap", $1b,$1b,$1b, "        ", 0
+        .text "  wrap", $1b, 0
 
 
 ;        * = SID_LOAD
