@@ -10,3 +10,5 @@ minidycp.prg
 # Maybe Awk shit?
 *.out
 
+minidycp*.prg
+

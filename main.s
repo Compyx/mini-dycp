@@ -38,13 +38,13 @@
         LOGO_ROW = 0
 
 
-
+.if USE_SYSLINE=1
 ; BASIC SYS line
         * = $0801
         .word (+), 2019
         .null $9e, format("%d", start)
 +       .word 0
-
+.fi
 
 trigger_irq .macro
         lda #<(\1)
@@ -156,6 +156,17 @@ logo_setup .proc
         bpl -
         rts
 .pend
+
+
+; $20c8-$21
+; bitmap (interleave with code or data here)
+        * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
+.for bmp_row = 0, bmp_row < 4, bmp_row += 1
+  .binary "focus.kla", 2 + (bmp_row * 320), LOGO_WIDTH * 8
+  * += $140 - (LOGO_WIDTH * 8)
+.next
+;.binary "focus.kla", 2, 5 * 320
+
 
 
         * = $2168
@@ -662,6 +673,16 @@ dycp_clear .proc
 .pend
 
 
+        ; vidram (interleave with code or data here)
+        * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
+.for vram_row = 0, vram_row < 4, vram_row += 1
+  .binary "focus.kla", 2 + 8000 + (vram_row * 40) + 0, LOGO_WIDTH
+  .fill 40 - LOGO_WIDTH, $00
+  ;* += (40 - LOGO_WIDTH)
+.next
+
+
+
 
         * = $2ce8
 
@@ -776,40 +797,12 @@ swap_sid .proc
 
 
 
-
-;        * = $2f00
         FONT = *
 .binary "font000.prg", 2
 
+        .align 16
 
-;        * = SID_LOAD
-        * = SID_TEMP
-.binary format("%s", SID_PATH), $7e
-
-
-; $20c8-$21
-; bitmap (interleave with code or data here)
-        * = $2000 + LOGO_OFFSET * 8 + (LOGO_ROW * 320)
-.for bmp_row = 0, bmp_row < 4, bmp_row += 1
-  .binary "focus.kla", 2 + (bmp_row * 320), LOGO_WIDTH * 8
-  * += $140 - (LOGO_WIDTH * 8)
-.next
-;.binary "focus.kla", 2, 5 * 320
-
-
-
-; vidram (interleave with code or data here)
-        * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
-.for vram_row = 0, vram_row < 4, vram_row += 1
-  .binary "focus.kla", 2 + 8000 + (vram_row * 40) + 0, LOGO_WIDTH
-  .fill 40 - LOGO_WIDTH, $00
-  ;* += (40 - LOGO_WIDTH)
-.next
-
-
-
-
-        * = $4000
+;        * = $4000
 
 ; $1b = .
 ; $1c = ,
@@ -818,14 +811,18 @@ swap_sid .proc
 ; $1f = % (for cracks)
 dycp_scrolltext
         .enc "screen"
-        .text "four kilobytes kinda sucks", $1c
-        .text "but i decided to get at least some graphics and lame effects "
+        .text "four kb kinda sucks", $1c
+        .text " but i decided to get at least some graphics and lame effects "
         .text "in this", $1b
-        .text "  so here we have a bitmap logo vsp and a dycp", $1b
+        .text "   so here we have a bitmap vsp and a dycp", $1b
         .text "  ", $1e,$1e,$1e, "focus rules", $1e,$1e,$1e
-        .text " ", 0
+        .text "     ", 0
 
-        .align 256
+
+;        * = SID_LOAD
+        * = SID_TEMP
+.binary format("%s", SID_PATH), $7e
+
 
 
 
