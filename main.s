@@ -68,9 +68,7 @@ trigger_irq .macro
         * = $2000
 start
         cld
-        lda #0
-        sta $0286
-        jsr $e536
+        jsr wipe_d800
         sei
         ldx #$ff
         txs
@@ -683,7 +681,16 @@ dycp_clear .proc
         bne --
         rts
 .pend
-
+wipe_d800
+        ldx #0
+        txa
+-       sta $d800,x
+        sta $d900,x
+        sta $da00,x
+        sta $db00,x
+        inx
+        bne -
+        rts
 
         ; vidram (interleave with code or data here)
         * = $2c00 + LOGO_OFFSET + (LOGO_ROW * 40)
@@ -692,6 +699,8 @@ dycp_clear .proc
   .fill 40 - LOGO_WIDTH, $00
   ;* += (40 - LOGO_WIDTH)
 .next
+
+
 
 
 
@@ -731,8 +740,6 @@ sprites_setup .proc
 
         rts
 .pend
-
-
 
 ; colram
 ;        * = $2e00
@@ -806,6 +813,7 @@ swap_sid .proc
         bne -
         rts
 .pend
+
 
 
 
