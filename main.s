@@ -1,9 +1,22 @@
 ; vim: set et ts=8 sw=8 sts=8 fdm=marker syntax=64tass:
 ;
+; 2019 CSDb intro compo 4KB entry
+;
+; Code & gfx:   Compyx/Focus
+; Music:        GRG/Bluez_mus
+;
+; The original idea was much more than this result, but I was a little optimistic
+; concerning the amount of code + (non-gfx/music) data required.
+; So now we have a small bitmap logo VSP and a tiny DYCP, with the DYCP being
+; very limited with this 4KB thing.
+;
+;
+;
 ; $2000-$25ff = bitmap logo, starts at $20c8 with 20 chars each row, so there's
 ;               some free space for code/data (pretty much filled at the moment)
 ; $2800-$2aff = dycp (filled)
 ; $2c00-$2c9f = bitmap logo vidram (cannot add code there)
+;
 ;
         SID_ENABLE= 1
         SID_LOAD = $1000
@@ -13,8 +26,7 @@
         SID_TEMP = $2600
 
 
-        ZP_TMP = $10
-        ZP = $20
+        ZP = $02
 
         FILL_SPRITE = $40
 
@@ -812,11 +824,11 @@ swap_sid .proc
 dycp_scrolltext
         .enc "screen"
         .text "four kb kinda sucks", $1c
-        .text " but i decided to get at least some graphics and lame effects "
+        .text " but i decided to get at least some lame graphics and effects "
         .text "in this", $1b
-        .text "   so here we have a bitmap vsp and a dycp", $1b
+        .text "   so here we have a bitmap vsp and a small dycp", $1b
         .text "  ", $1e,$1e,$1e, "focus rules", $1e,$1e,$1e
-        .text "     ", 0
+        .text "  wrap", $1b,$1b,$1b, "        ", 0
 
 
 ;        * = SID_LOAD
