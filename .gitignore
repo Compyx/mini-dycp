@@ -4,11 +4,13 @@
 # label files output by 64tas
 *labels*
 
-# final binary
-minidycp.prg
 
 # Maybe Awk shit?
 *.out
 
+# binary, including exomized version
 minidycp*.prg
+
+# VICE screenshots
+vice-*.png
 
